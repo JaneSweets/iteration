@@ -128,3 +128,78 @@ sim_mean_sd = function(n_obs, mu, sigma) {
 sim_mean_sd(n_obs = 30, mu = 5, sigma = .5)
 ```
 
+## LoTR data
+
+```{r}
+import_LoTR = function(path = "data/LotR_Words.xlsx", movie_name, data_range) {
+  
+  movie_df =
+    readxl::read_excel(path, range = data_range) |> 
+    mutate(movie = movie_name) |> 
+    janitor::clean_names() |> 
+    pivot_longer(
+      female:male,
+      names_to = "sex",
+      values_to = "words"
+    ) |> 
+    select(movie, everything())
+  
+  movie_df
+  
+}
+
+lotr_tidy = import_LoTR(movie_name = "fellowship_ring", data_range = "B3:D6") |> 
+  bind_rows(import_LoTR(movie_name = "two_towers", data_range = "F3:H6")) |> 
+  bind_rows(import_LoTR(movie_name = "return_king", data_range = "J3:L6")) |> 
+  mutate(race = str_to_lower(race))
+```
+
+## NSDUH
+
+```{r}
+nsduh_url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+
+nsduh_html = read_html(nsduh_url)
+
+nsduh_table <- function(html, table_num, table_name) {
+  
+  table = 
+    html |> 
+    html_table() |> 
+    nth(table_num) |>
+    slice(-1) |> 
+    select(-contains("P Value")) |>
+    pivot_longer(
+      -State,
+      names_to = "age_year", 
+      values_to = "percent") |>
+    separate(age_year, into = c("age", "year"), sep = "\\(") |>
+    mutate(
+      year = str_replace(year, "\\)", ""),
+      percent = str_replace(percent, "[a-c]$", ""),
+      percent = as.numeric(percent),
+      name = table_name) |>
+    filter(!(State %in% c("Total U.S.", "Northeast", "Midwest", "South", "West")))
+}
+
+nsduh_results = 
+  bind_rows(
+    nsduh_table(nsduh_html, 1, "marj_one_year"),
+    nsduh_table(nsduh_html, 4, "cocaine_one_year"),
+    nsduh_table(nsduh_html, 5, "heroin_one_year")
+  )
+```
+
+
+```{r}
+f = function(x) {
+  z = x + y
+  z
+}
+
+x = 1
+y = 2
+
+f(x = y)
+```
+
